@@ -6,9 +6,9 @@ import { typeOrmConfig } from './config/typeorm.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 import { RoleSeeder } from './modules/users/seeds/role.seeder';
 import { Role } from './modules/users/entities/role.entity';
-import { User } from './modules/users/entities/user.entity';
 
 @Module({
   imports: [
@@ -28,8 +28,9 @@ import { User } from './modules/users/entities/user.entity';
         limit: 1000, // 1000 requests por hora
       },
     ]),
-    TypeOrmModule.forFeature([Role, User]),
+    TypeOrmModule.forFeature([Role]),
     AuthModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService, RoleSeeder],

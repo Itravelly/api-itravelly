@@ -36,13 +36,14 @@ export class AuthService {
       throw new ConflictException('El usuario ya existe con este email o teléfono');
     }
 
-    // Obtener el rol por defecto (client)
+    // Obtener el rol (especificado o por defecto)
+    const roleName = registerDto.role || UserRole.CLIENT;
     const role = await this.roleRepository.findOne({
-      where: { name: UserRole.CLIENT },
+      where: { name: roleName },
     });
 
     if (!role) {
-      throw new NotFoundException('Rol no encontrado');
+      throw new NotFoundException(`Rol '${roleName}' no encontrado`);
     }
 
     // Crear el usuario
@@ -66,6 +67,7 @@ export class AuthService {
     return {
       message: 'Usuario registrado exitosamente. Se ha enviado un código de verificación a tu email.',
       userId: savedUser.id,
+      role: role.name,
     };
   }
 
