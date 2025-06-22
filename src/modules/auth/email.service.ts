@@ -7,18 +7,26 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor(private configService: ConfigService) {
+    const port = parseInt(this.configService.get<string>('SMTP_PORT') || '587');
+    const isSecure = port === 465;
+    
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>('SMTP_HOST'),
-      port: parseInt(this.configService.get<string>('SMTP_PORT') || '587'),
-      secure: true, // true para 465, false para otros puertos
+      port: port,
+      secure: isSecure, // true para 465, false para otros puertos
       auth: {
         user: this.configService.get<string>('SMTP_USER'),
         pass: this.configService.get<string>('SMTP_PASS'),
+      },
+      tls: {
+        rejectUnauthorized: false, // Para desarrollo
       },
     });
   }
 
   async sendVerificationEmail(email: string, code: string) {
+    console.log('🔄 [EMAIL] Iniciando envío de email de verificación para:', email);
+    
     const mailOptions = {
       from: this.configService.get<string>('SMTP_FROM') || 'noreply@itravelly.com',
       to: email,
@@ -39,11 +47,28 @@ export class EmailService {
     };
 
     try {
+      console.log('📧 [EMAIL] Configuración SMTP:', {
+        host: this.configService.get<string>('SMTP_HOST'),
+        port: this.configService.get<string>('SMTP_PORT'),
+        user: this.configService.get<string>('SMTP_USER'),
+        from: mailOptions.from
+      });
+      
       await this.transporter.sendMail(mailOptions);
+      console.log('✅ [EMAIL] Email enviado exitosamente a:', email);
     } catch (error) {
-      console.error('Error enviando email:', error);
-      // En desarrollo, podrías querer loguear el código en lugar de fallar
-      console.log(`Código de verificación para ${email}: ${code}`);
+      console.error('❌ [EMAIL] Error enviando email a:', email);
+      console.error('❌ [EMAIL] Detalles del error:', {
+        message: error.message,
+        code: error.code,
+        command: error.command
+      });
+      
+      // En desarrollo, loguear el código en lugar de fallar
+      console.log('📋 [EMAIL] Código de verificación para desarrollo:', email, 'Código:', code);
+      
+      // No lanzar el error para que el registro continúe
+      // throw error;
     }
   }
 } 

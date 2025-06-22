@@ -161,4 +161,23 @@ export class UsersController {
   async remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.usersService.remove(id, req.user);
   }
+
+  @Delete('all')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Eliminar todos los usuarios (solo superadmin)' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Todos los usuarios eliminados exitosamente' 
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'No autorizado' 
+  })
+  @ApiResponse({ 
+    status: 403, 
+    description: 'Solo superadmins pueden eliminar todos los usuarios' 
+  })
+  async removeAll(@Request() req) {
+    return this.usersService.removeAll(req.user);
+  }
 } 

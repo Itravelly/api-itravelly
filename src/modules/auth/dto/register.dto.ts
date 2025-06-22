@@ -45,10 +45,20 @@ export class RegisterDto {
   @Matches(/^\+\d{1,4}$/, { message: 'El código de marcación debe tener el formato +XXX (ej: +507, +1)' })
   dialCode: string;
 
-  @ApiProperty({ description: 'Contraseña' })
+  @ApiProperty({ 
+    description: 'Contraseña (mínimo 8 caracteres, debe incluir mayúscula, minúscula, número y carácter especial)',
+    minLength: 8,
+    maxLength: 100
+  })
   @IsString()
-  @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
+  @MaxLength(100, { message: 'La contraseña no puede exceder 100 caracteres' })
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]/,
+    { 
+      message: 'La contraseña debe incluir al menos una mayúscula, una minúscula, un número y un carácter especial (@$!%*?&#)' 
+    }
+  )
   password: string;
 
   @ApiProperty({ 
