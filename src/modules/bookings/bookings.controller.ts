@@ -6,7 +6,6 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/role.entity';
-import { BookingStatus, PaymentStatus } from './entities/booking.entity';
 
 @ApiTags('Bookings')
 @Controller('bookings')
@@ -105,7 +104,7 @@ export class BookingsController {
   @ApiResponse({ status: 404, description: 'Booking not found' })
   updateStatus(
     @Param('id') id: string,
-    @Body() body: { status: BookingStatus },
+    @Body() body: { status: string },
     @Request() req,
   ) {
     if (req.user.role.name === UserRole.ADMIN) {
@@ -124,7 +123,7 @@ export class BookingsController {
   @ApiResponse({ status: 404, description: 'Booking not found' })
   updatePaymentStatus(
     @Param('id') id: string,
-    @Body() body: { paymentStatus: PaymentStatus },
+    @Body() body: { paymentStatus: string },
   ) {
     return this.bookingsService.updatePaymentStatus(+id, body.paymentStatus);
   }

@@ -2,20 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 't
 import { User } from '../../users/entities/user.entity';
 import { Activity } from '../../activities/entities/activity.entity';
 import { Promotion } from '../../promotions/entities/promotion.entity';
-
-export enum BookingStatus {
-  PENDING = 'pending',
-  CONFIRMED = 'confirmed',
-  CANCELLED = 'cancelled',
-  COMPLETED = 'completed',
-}
-
-export enum PaymentStatus {
-  PENDING = 'pending',
-  PAID = 'paid',
-  FAILED = 'failed',
-  REFUNDED = 'refunded',
-}
+import { BookingStatus } from './booking-status.entity';
+import { PaymentStatus } from './payment-status.entity';
 
 @Entity('bookings')
 export class Booking {
@@ -64,19 +52,19 @@ export class Booking {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   finalPrice: number;
 
-  @Column({
-    type: 'enum',
-    enum: BookingStatus,
-    default: BookingStatus.PENDING
-  })
-  status: BookingStatus;
+  @ManyToOne(() => BookingStatus, bookingStatus => bookingStatus.bookings)
+  @JoinColumn({ name: 'bookingStatusId' })
+  bookingStatus: BookingStatus;
 
-  @Column({
-    type: 'enum',
-    enum: PaymentStatus,
-    default: PaymentStatus.PENDING
-  })
+  @Column({ type: 'int' })
+  bookingStatusId: number;
+
+  @ManyToOne(() => PaymentStatus, paymentStatus => paymentStatus.bookings)
+  @JoinColumn({ name: 'paymentStatusId' })
   paymentStatus: PaymentStatus;
+
+  @Column({ type: 'int' })
+  paymentStatusId: number;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   specialRequests: string;

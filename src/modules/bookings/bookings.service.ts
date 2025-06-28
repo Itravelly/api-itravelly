@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Booking, BookingStatus, PaymentStatus } from './entities/booking.entity';
+import { Booking } from './entities/booking.entity';
+import { BookingStatus } from './entities/booking-status.entity';
+import { PaymentStatus } from './entities/payment-status.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { Activity, ActivityStatus } from '../activities/entities/activity.entity';
 import { Promotion } from '../promotions/entities/promotion.entity';
 import { User } from '../users/entities/user.entity';
 import { ActivitiesService } from '../activities/activities.service';
+import { BookingStatusSeeder } from './seeds/booking-status.seeder';
+import { PaymentStatusSeeder } from './seeds/payment-status.seeder';
 
 @Injectable()
 export class BookingsService {
@@ -20,6 +24,8 @@ export class BookingsService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private activitiesService: ActivitiesService,
+    private bookingStatusSeeder: BookingStatusSeeder,
+    private paymentStatusSeeder: PaymentStatusSeeder,
   ) {}
 
   async create(createBookingDto: CreateBookingDto, userId: number): Promise<Booking> {
@@ -86,6 +92,14 @@ export class BookingsService {
     // Generate unique booking code
     const bookingCode = this.generateBookingCode();
 
+    // Get default statuses
+    const pendingBookingStatus = await this.bookingStatusSeeder.getStatusByName('pending');
+    const pendingPaymentStatus = await this.paymentStatusSeeder.getStatusByName('pending');
+
+    if (!pendingBookingStatus || !pendingPaymentStatus) {
+      throw new BadRequestException('Default statuses not found');
+    }
+
     const booking = this.bookingRepository.create({
       ...createBookingDto,
       userId,
@@ -94,8 +108,8 @@ export class BookingsService {
       finalPrice,
       bookingCode,
       promotionId: promotion?.id,
-      status: BookingStatus.PENDING,
-      paymentStatus: PaymentStatus.PENDING,
+      bookingStatusId: pendingBookingStatus.id,
+      paymentStatusId: pendingPaymentStatus.id,
     });
 
     return await this.bookingRepository.save(booking);
@@ -106,6 +120,8 @@ export class BookingsService {
       .leftJoinAndSelect('booking.user', 'user')
       .leftJoinAndSelect('booking.activity', 'activity')
       .leftJoinAndSelect('booking.promotion', 'promotion')
+      .leftJoinAndSelect('booking.bookingStatus', 'bookingStatus')
+      .leftJoinAndSelect('booking.paymentStatus', 'paymentStatus')
       .leftJoinAndSelect('activity.corporate', 'corporate');
 
     if (userId) {
@@ -124,6 +140,8 @@ export class BookingsService {
       .leftJoinAndSelect('booking.user', 'user')
       .leftJoinAndSelect('booking.activity', 'activity')
       .leftJoinAndSelect('booking.promotion', 'promotion')
+      .leftJoinAndSelect('booking.bookingStatus', 'bookingStatus')
+      .leftJoinAndSelect('booking.paymentStatus', 'paymentStatus')
       .leftJoinAndSelect('activity.corporate', 'corporate')
       .where('booking.id = :id', { id });
 
@@ -147,7 +165,7 @@ export class BookingsService {
   async findByCode(bookingCode: string): Promise<Booking> {
     const booking = await this.bookingRepository.findOne({
       where: { bookingCode },
-      relations: ['user', 'activity', 'promotion', 'activity.corporate']
+      relations: ['user', 'activity', 'promotion', 'bookingStatus', 'paymentStatus', 'activity.corporate']
     });
 
     if (!booking) {
@@ -157,18 +175,34 @@ export class BookingsService {
     return booking;
   }
 
-  async updateStatus(id: number, status: BookingStatus, userId?: number, corporateId?: number): Promise<Booking> {
+  async updateStatus(id: number, statusName: string, userId?: number, corporateId?: number): Promise<Booking> {
     const booking = await this.findOne(id, userId, corporateId);
-    booking.status = status;
+    const newStatus = await this.bookingStatusSeeder.getStatusByName(statusName);
+    
+    if (!newStatus) {
+      throw new BadRequestException(`Status '${statusName}' not found`);
+    }
+
+    booking.bookingStatusId = newStatus.id;
     return await this.bookingRepository.save(booking);
   }
 
-  async updatePaymentStatus(id: number, paymentStatus: PaymentStatus): Promise<Booking> {
+  async updatePaymentStatus(id: number, paymentStatusName: string): Promise<Booking> {
     const booking = await this.findOne(id);
-    booking.paymentStatus = paymentStatus;
+    const newPaymentStatus = await this.paymentStatusSeeder.getStatusByName(paymentStatusName);
     
-    if (paymentStatus === PaymentStatus.PAID) {
-      booking.status = BookingStatus.CONFIRMED;
+    if (!newPaymentStatus) {
+      throw new BadRequestException(`Payment status '${paymentStatusName}' not found`);
+    }
+
+    booking.paymentStatusId = newPaymentStatus.id;
+    
+    // If payment is paid, automatically confirm booking
+    if (paymentStatusName === 'paid') {
+      const confirmedStatus = await this.bookingStatusSeeder.getStatusByName('confirmed');
+      if (confirmedStatus) {
+        booking.bookingStatusId = confirmedStatus.id;
+      }
     }
     
     return await this.bookingRepository.save(booking);
@@ -176,16 +210,21 @@ export class BookingsService {
 
   async cancel(id: number, userId?: number): Promise<Booking> {
     const booking = await this.findOne(id, userId);
+    const cancelledStatus = await this.bookingStatusSeeder.getStatusByName('cancelled');
     
-    if (booking.status === BookingStatus.CANCELLED) {
+    if (!cancelledStatus) {
+      throw new BadRequestException('Cancelled status not found');
+    }
+    
+    if (booking.bookingStatus.name === 'cancelled') {
       throw new BadRequestException('Booking is already cancelled');
     }
 
-    if (booking.status === BookingStatus.COMPLETED) {
+    if (booking.bookingStatus.name === 'completed') {
       throw new BadRequestException('Cannot cancel completed booking');
     }
 
-    booking.status = BookingStatus.CANCELLED;
+    booking.bookingStatusId = cancelledStatus.id;
     return await this.bookingRepository.save(booking);
   }
 
@@ -200,17 +239,19 @@ export class BookingsService {
     const bookings = await this.bookingRepository
       .createQueryBuilder('booking')
       .leftJoin('booking.activity', 'activity')
+      .leftJoinAndSelect('booking.bookingStatus', 'bookingStatus')
+      .leftJoinAndSelect('booking.paymentStatus', 'paymentStatus')
       .where('activity.corporateId = :corporateId', { corporateId })
       .getMany();
 
     const stats = {
       total: bookings.length,
-      pending: bookings.filter(b => b.status === BookingStatus.PENDING).length,
-      confirmed: bookings.filter(b => b.status === BookingStatus.CONFIRMED).length,
-      cancelled: bookings.filter(b => b.status === BookingStatus.CANCELLED).length,
-      completed: bookings.filter(b => b.status === BookingStatus.COMPLETED).length,
+      pending: bookings.filter(b => b.bookingStatus.name === 'pending').length,
+      confirmed: bookings.filter(b => b.bookingStatus.name === 'confirmed').length,
+      cancelled: bookings.filter(b => b.bookingStatus.name === 'cancelled').length,
+      completed: bookings.filter(b => b.bookingStatus.name === 'completed').length,
       revenue: bookings
-        .filter(b => b.paymentStatus === PaymentStatus.PAID)
+        .filter(b => b.paymentStatus.name === 'paid')
         .reduce((sum, b) => sum + Number(b.finalPrice), 0)
     };
 

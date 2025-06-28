@@ -5,7 +5,7 @@ import { Activity, ActivityStatus } from './entities/activity.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { Corporate } from '../corporates/entities/corporate.entity';
 import { Booking } from '../bookings/entities/booking.entity';
-import { BookingStatus } from '../bookings/entities/booking.entity';
+import { BookingStatus } from '../bookings/entities/booking-status.entity';
 
 @Injectable()
 export class ActivitiesService {
@@ -145,7 +145,7 @@ export class ActivitiesService {
       where: {
         activityId,
         bookingDate: bookingDate,
-        status: BookingStatus.CONFIRMED
+        bookingStatus: { name: 'confirmed' }
       }
     });
 
@@ -173,7 +173,7 @@ export class ActivitiesService {
       .leftJoinAndSelect('activity.corporate', 'corporate')
       .leftJoin('activity.bookings', 'booking')
       .where('activity.status = :status', { status: ActivityStatus.ACTIVE })
-      .andWhere('booking.status = :bookingStatus', { bookingStatus: 'confirmed' })
+      .andWhere('booking.bookingStatus.name = :bookingStatus', { bookingStatus: 'confirmed' })
       .groupBy('activity.id')
       .orderBy('COUNT(booking.id)', 'DESC')
       .limit(limit)

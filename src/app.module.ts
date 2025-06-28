@@ -19,6 +19,8 @@ import { Activity } from './modules/activities/entities/activity.entity';
 import { Corporate } from './modules/corporates/entities/corporate.entity';
 import { Branch } from './modules/corporates/entities/branch.entity';
 import { Booking } from './modules/bookings/entities/booking.entity';
+import { BookingStatus } from './modules/bookings/entities/booking-status.entity';
+import { PaymentStatus } from './modules/bookings/entities/payment-status.entity';
 import { Promotion } from './modules/promotions/entities/promotion.entity';
 import { VerificationCode } from './modules/auth/entities/verification-code.entity';
 
@@ -48,6 +50,8 @@ import { VerificationCode } from './modules/auth/entities/verification-code.enti
       Corporate,
       Branch,
       Booking,
+      BookingStatus,
+      PaymentStatus,
       Promotion,
       VerificationCode,
     ]),
