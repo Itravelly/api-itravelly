@@ -7,8 +7,20 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { ActivitiesModule } from './modules/activities/activities.module';
+import { CorporatesModule } from './modules/corporates/corporates.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
+import { PromotionsModule } from './modules/promotions/promotions.module';
 import { RoleSeeder } from './modules/users/seeds/role.seeder';
 import { Role } from './modules/users/entities/role.entity';
+import { User } from './modules/users/entities/user.entity';
+import { ActivityType } from './modules/activities/entities/activity-type.entity';
+import { Activity } from './modules/activities/entities/activity.entity';
+import { Corporate } from './modules/corporates/entities/corporate.entity';
+import { Branch } from './modules/corporates/entities/branch.entity';
+import { Booking } from './modules/bookings/entities/booking.entity';
+import { Promotion } from './modules/promotions/entities/promotion.entity';
+import { VerificationCode } from './modules/auth/entities/verification-code.entity';
 
 @Module({
   imports: [
@@ -28,9 +40,23 @@ import { Role } from './modules/users/entities/role.entity';
         limit: 1000, // 1000 requests por hora
       },
     ]),
-    TypeOrmModule.forFeature([Role]),
+    TypeOrmModule.forFeature([
+      Role,
+      User,
+      ActivityType,
+      Activity,
+      Corporate,
+      Branch,
+      Booking,
+      Promotion,
+      VerificationCode,
+    ]),
     AuthModule,
     UsersModule,
+    ActivitiesModule,
+    CorporatesModule,
+    BookingsModule,
+    PromotionsModule,
   ],
   controllers: [AppController],
   providers: [AppService, RoleSeeder],

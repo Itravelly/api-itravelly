@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, BeforeInsert, BeforeUpdate, OneToMany } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { Role, UserRole } from './role.entity';
+import { Booking } from '../../bookings/entities/booking.entity';
 
 @Entity('users')
 export class User {
@@ -51,6 +52,9 @@ export class User {
 
   @Column({ type: 'int' })
   roleId: number;
+
+  @OneToMany(() => Booking, booking => booking.user)
+  bookings: Booking[];
 
   @BeforeInsert()
   @BeforeUpdate()
