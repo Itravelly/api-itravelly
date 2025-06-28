@@ -20,8 +20,20 @@ export class Role {
   })
   name: UserRole;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  nameEs: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  nameEn: string;
+
   @Column({ type: 'text', nullable: true })
   description: string;
+
+  @Column({ type: 'text', nullable: true })
+  descriptionEs: string;
+
+  @Column({ type: 'text', nullable: true })
+  descriptionEn: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;
